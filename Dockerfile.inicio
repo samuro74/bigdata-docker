@@ -1,0 +1,67 @@
+# bigdata-inicio Dockerfile
+FROM bigdata-apoyo
+
+ENV HIVE_VERSION=3.1.3
+ENV PYTHON_DEPS="catboost numpy pandas ipykernel lightgbm matplotlib tensorflow-cpu findspark optuna pycaret pyspark==3.5.0 plotly scipy seaborn scikit-learn statsmodels nltk"
+
+USER $USERNAME
+WORKDIR /home/$USERNAME
+
+# Install Hive
+RUN wget https://archive.apache.org/dist/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz \
+    && tar -xzf apache-hive-${HIVE_VERSION}-bin.tar.gz -C /tmp/ \
+    && sudo mv /tmp/apache-hive-${HIVE_VERSION}-bin /opt/hive \
+    && rm apache-hive-${HIVE_VERSION}-bin.tar.gz \
+    && sudo mkdir -p /opt/hive/warehouse \
+    && sudo chown -R $USERNAME:$USERNAME /opt/hive
+
+# Create Python virtual environment and install Jupyter with dependencies
+RUN python3 -m venv /home/$USERNAME/venv \
+    && . /home/$USERNAME/venv/bin/activate \
+	&& pip install --no-cache-dir --upgrade pip wheel setuptools \
+    && pip install --no-cache-dir jupyterlab $PYTHON_DEPS \
+    && echo "source /home/$USERNAME/venv/bin/activate" >> /home/$USERNAME/.bashrc
+
+# Configure Hive environment
+ENV HIVE_HOME=/opt/hive
+ENV PATH=$PATH:$HIVE_HOME/bin
+
+# Generate Hive configuration
+RUN mkdir -p /home/$USERNAME/config/hive \
+    && cat > /home/$USERNAME/config/hive/hive-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:derby:;databaseName=/tmp/hive/metastore_db;create=true</value>
+    </property>
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>org.apache.derby.jdbc.EmbeddedDriver</value>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>/opt/hive/warehouse</value>
+    </property>
+</configuration>
+EOF
+
+# Generate Spark configuration
+RUN mkdir -p /home/$USERNAME/config/spark \
+    && cat > /home/$USERNAME/config/spark/spark-defaults.conf <<EOF
+spark.master            yarn
+spark.driver.memory     1g
+spark.yarn.am.memory    1g
+spark.executor.memory   1g
+spark.executor.cores    1
+spark.serializer        org.apache.spark.serializer.KryoSerializer
+EOF
+
+# Copy entrypoint script
+COPY --chown=$USERNAME:$USERNAME entrypoint-inicio.sh /home/$USERNAME/entrypoint.sh
+RUN chmod +x /home/$USERNAME/entrypoint.sh
+
+EXPOSE 8088 9870 9864 8042 4040 7077 8888 9083 2181 9092
+
+ENTRYPOINT ["/home/bigdata/entrypoint.sh"]

@@ -1,0 +1,123 @@
+# bigdata-apoyo Dockerfile
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV HADOOP_VERSION=3.3.6
+ENV SPARK_VERSION=3.5.0
+ENV SCALA_VERSION=2.12.18
+ENV KAFKA_VERSION=3.6.1
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV USERNAME=bigdata
+ENV USER_UID=1000
+ENV USER_GID=1000
+
+# Create non-root user and setup environment
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        sudo \
+        openjdk-11-jdk \
+        wget \
+        curl \
+        ssh \
+        rsync \
+        python3 \
+        python3-pip \
+        python3-venv \
+        vim \
+        net-tools \
+        procps \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch to non-root user
+USER $USERNAME
+WORKDIR /home/$USERNAME
+
+# Install Scala
+RUN wget https://downloads.lightbend.com/scala/${SCALA_VERSION}/scala-${SCALA_VERSION}.deb \
+    && sudo dpkg -i scala-${SCALA_VERSION}.deb \
+    && rm scala-${SCALA_VERSION}.deb
+
+# Install Hadoop
+RUN wget https://archive.apache.org/dist/hadoop/core/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz \
+    && tar -xzf hadoop-${HADOOP_VERSION}.tar.gz -C /tmp/ \
+    && sudo mv /tmp/hadoop-${HADOOP_VERSION} /opt/hadoop \
+    && rm hadoop-${HADOOP_VERSION}.tar.gz \
+    && sudo mkdir -p /opt/hadoop/logs \
+    && sudo chown -R $USERNAME:$USERNAME /opt/hadoop
+
+# Install Spark
+RUN wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+    && tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz -C /tmp/ \
+    && sudo mv /tmp/spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark \
+    && rm spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+    && sudo chown -R $USERNAME:$USERNAME /opt/spark
+
+# Install Kafka
+RUN wget https://archive.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.13-${KAFKA_VERSION}.tgz \
+    && tar -xzf kafka_2.13-${KAFKA_VERSION}.tgz -C /tmp/ \
+    && sudo mv /tmp/kafka_2.13-${KAFKA_VERSION} /opt/kafka \
+    && rm kafka_2.13-${KAFKA_VERSION}.tgz \
+    && sudo chown -R $USERNAME:$USERNAME /opt/kafka
+
+# Create directories and set permissions
+RUN sudo mkdir -p /tmp/hadoop-${USERNAME}/dfs/name \
+    && sudo mkdir -p /tmp/hadoop-${USERNAME}/dfs/data \
+    && sudo mkdir -p /var/log/hadoop \
+    && sudo mkdir -p /var/log/spark \
+    && sudo mkdir -p /var/log/kafka \
+    && sudo chown -R $USERNAME:$USERNAME /tmp/hadoop-${USERNAME} \
+    && sudo chown -R $USERNAME:$USERNAME /var/log/hadoop \
+    && sudo chown -R $USERNAME:$USERNAME /var/log/spark \
+    && sudo chown -R $USERNAME:$USERNAME /var/log/kafka
+
+# Configure environment variables
+ENV HADOOP_HOME=/opt/hadoop
+ENV SPARK_HOME=/opt/spark
+ENV KAFKA_HOME=/opt/kafka
+ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$KAFKA_HOME/bin
+
+# Generate Hadoop configuration files
+RUN mkdir -p /home/$USERNAME/config/hadoop \
+    && cat > /home/$USERNAME/config/hadoop/core-site.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>fs.default.name</name>
+        <value>hdfs://namenode:9000</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/tmp/hadoop-${USERNAME}</value>
+    </property>
+</configuration>
+EOF
+
+RUN cat > /home/$USERNAME/config/hadoop/hdfs-site.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/tmp/hadoop-${USERNAME}/dfs/name</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/tmp/hadoop-${USERNAME}/dfs/data</value>
+    </property>
+</configuration>
+EOF
+
+# Copy entrypoint script
+COPY --chown=$USERNAME:$USERNAME entrypoint-apoyo.sh /home/$USERNAME/entrypoint.sh
+RUN chmod +x /home/$USERNAME/entrypoint.sh
+
+ENTRYPOINT ["/home/bigdata/entrypoint.sh"]

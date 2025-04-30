@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  namenode:
+    image: bigdata-inicio
+    container_name: namenode
+    hostname: namenode
+    ports:
+      - "9870:9870"
+      - "8088:8088"
+      - "8888:8888"
+      - "9083:9083"
+      - "2181:2181"
+      - "9092:9092"
+    volumes:
+      - namenode_data:/opt/hadoop/dfs/name
+      - hive_data:/opt/hive/warehouse
+    environment:
+      - CLUSTER_NAME=bigdata
+      - SERVICE_TYPE=master
+      - HADOOP_SSH_OPTS="-o StrictHostKeyChecking=no"  # Ignorar checks de SSH
+    user: "1000:1000"
+    networks:
+      - bigdata-net
+
+  datanode1:
+    image: bigdata-apoyo
+    container_name: datanode1
+    hostname: datanode1
+    ports:
+      - "9864:9864"
+    volumes:
+      - datanode1_data:/opt/hadoop/dfs/data
+    environment:
+      - CLUSTER_NAME=bigdata
+      - SERVICE_TYPE=worker
+      - NAMENODE_HOST=namenode
+    depends_on:
+      - namenode
+    user: "1000:1000"
+    networks:
+      - bigdata-net
+
+networks:
+  bigdata-net:
+    driver: bridge
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  hive_data:
