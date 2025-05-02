@@ -58,6 +58,15 @@ spark.executor.cores    1
 spark.serializer        org.apache.spark.serializer.KryoSerializer
 EOF
 
+RUN cat > /home/$USERNAME/config/spark/spark-env.sh <<EOF
+#!/bin/bash
+export HADOOP_CONF_DIR=\$HADOOP_HOME/etc/hadoop
+export SPARK_DIST_CLASSPATH=\$(hadoop classpath)
+EOF
+
+# Make spark-env.sh executable
+RUN chmod +x /home/$USERNAME/config/spark/spark-env.sh
+
 # Copy entrypoint script
 COPY --chown=$USERNAME:$USERNAME entrypoint-inicio.sh /home/$USERNAME/entrypoint.sh
 RUN chmod +x /home/$USERNAME/entrypoint.sh
