@@ -1,7 +1,7 @@
 # bigdata-inicio Dockerfile
 FROM bigdata-apoyo
 
-ENV HIVE_VERSION=3.1.3
+ENV HIVE_VERSION=4.0.0
 ENV PYTHON_DEPS="catboost numpy pandas ipykernel lightgbm matplotlib tensorflow-cpu findspark optuna pycaret pyspark==3.5.0 plotly scipy seaborn scikit-learn statsmodels nltk"
 
 USER $USERNAME
@@ -25,6 +25,10 @@ RUN python3 -m venv /home/$USERNAME/venv \
 # Configure Hive environment
 ENV HIVE_HOME=/opt/hive
 ENV PATH=$PATH:$HIVE_HOME/bin
+
+# Solución SLF4J y permisos
+RUN rm -f $HIVE_HOMElib/log4j-slf4j-impl-*.jar && \
+    cp ${HADOOP_HOME}/share/hadoop/common/lib/slf4j-reload4j-*.jar $HIVE_HOME/lib/
 
 # Generate Hive configuration
 RUN mkdir -p /home/$USERNAME/config/hive \
@@ -56,6 +60,9 @@ spark.yarn.am.memory    1g
 spark.executor.memory   1g
 spark.executor.cores    1
 spark.serializer        org.apache.spark.serializer.KryoSerializer
+spark.history.ui.port	18080
+spark.history.fs.logDirectory	file:/tmp/spark-events
+spark.eventLog.enabled	true
 EOF
 
 RUN cat > /home/$USERNAME/config/spark/spark-env.sh <<EOF
@@ -64,8 +71,10 @@ export HADOOP_CONF_DIR=\$HADOOP_HOME/etc/hadoop
 export SPARK_DIST_CLASSPATH=\$(hadoop classpath)
 EOF
 
-# Make spark-env.sh executable
 RUN chmod +x /home/$USERNAME/config/spark/spark-env.sh
+
+# Set log directory
+RUN mkdir -p /tmp/spark-events
 
 # Copy entrypoint script
 COPY --chown=$USERNAME:$USERNAME entrypoint-inicio.sh /home/$USERNAME/entrypoint.sh
