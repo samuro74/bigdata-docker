@@ -7,6 +7,9 @@ export SPARK_HOME=/opt/spark
 export KAFKA_HOME=/opt/kafka
 export HIVE_HOME=/opt/hive
 export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$KAFKA_HOME/bin:$HIVE_HOME/bin
+export HADOOP_OPTS="--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
+                   --add-opens=java.base/java.lang=ALL-UNNAMED \
+                   --add-opens=java.base/java.net=ALL-UNNAMED"
 
 # Copy configurations to their final locations
 mkdir -p $HADOOP_HOME/etc/hadoop
