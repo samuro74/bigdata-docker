@@ -13,7 +13,7 @@ Este proyecto implementa un **entorno completo de Big Data** usando Docker, idea
 | **Hadoop** | 3.3.6 | Almacenamiento distribuido (HDFS) + YARN |
 | **Spark** | 3.5.0 | Procesamiento distribuido |
 | **Kafka** | 3.6.1 | Stream processing |
-| **Hive** | 3.1.3 | Data warehouse SQL |
+| **Hive** | 4.0.0 | Data warehouse SQL |
 | **JupyterLab** | 4.x | Entorno de notebooks con Python |
 
 ---
