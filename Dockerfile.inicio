@@ -2,7 +2,7 @@
 FROM bigdata-apoyo
 
 ENV HIVE_VERSION=4.0.0
-ENV PYTHON_DEPS="catboost numpy pandas ipykernel lightgbm matplotlib tensorflow-cpu findspark optuna pycaret pyspark==3.5.0 plotly scipy seaborn scikit-learn statsmodels nltk"
+ENV PYTHON_DEPS="catboost findspark ipykernel lightgbm matplotlib nltk numpy openpyxl optuna pandas plotly pycaret pyspark==3.5.0 rapidfuzz scikit-learn scipy seaborn spacy statsmodels tensorflow-cpu xlsxwriter"
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
@@ -20,6 +20,7 @@ RUN python3 -m venv /home/$USERNAME/venv \
     && . /home/$USERNAME/venv/bin/activate \
 	&& pip install --no-cache-dir --upgrade pip wheel setuptools \
     && pip install --no-cache-dir jupyterlab $PYTHON_DEPS \
+	&& python3 -m spacy download es_core_news_lg \
     && echo "source /home/$USERNAME/venv/bin/activate" >> /home/$USERNAME/.bashrc
 
 # Configure Hive environment
