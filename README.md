@@ -26,7 +26,7 @@ Este proyecto implementa un **entorno completo de Big Data** usando Docker, idea
 
 ### **Características Clave**
 - Usuario no-root (`bigdata`) por seguridad
-- JupyterLab con **26 librerías** preinstaladas (TensorFlow, PySpark, Pandas, etc.)
+- JupyterLab con **21 librerías** preinstaladas (TensorFlow, PySpark, Pandas, etc.)
 - Configuración automática de redes entre contenedores
 - Volúmenes persistentes para datos
 
